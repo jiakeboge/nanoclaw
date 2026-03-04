@@ -74,16 +74,11 @@ function buildVolumeMounts(
       readonly: true,
     });
 
-    // Shadow .env so the agent cannot read secrets from the mounted project root.
-    // Secrets are passed via stdin instead (see readSecrets()).
-    const envFile = path.join(projectRoot, '.env');
-    if (fs.existsSync(envFile)) {
-      mounts.push({
-        hostPath: '/dev/null',
-        containerPath: '/workspace/project/.env',
-        readonly: true,
-      });
-    }
+    // Note: We used to shadow .env to prevent the agent from reading secrets.
+    // Secrets are now passed via stdin instead (see readSecrets()), which is
+    // more secure. Apple Container doesn't support file shadowing via mounts,
+    // so we skip this mount. The .env file is still readable but secrets
+    // should be managed through stdin.
 
     // Main also gets its group folder as the working directory
     mounts.push({
