@@ -73,20 +73,10 @@ export async function run(args: string[]): Promise<void> {
   const projectRoot = process.cwd();
   const parsed = parseArgs(args);
 
-  if (!parsed.jid || !parsed.name || !parsed.folder) {
+  if (!parsed.jid || !parsed.name || !parsed.trigger || !parsed.folder) {
     emitStatus('REGISTER_CHANNEL', {
       STATUS: 'failed',
       ERROR: 'missing_required_args',
-      LOG: 'logs/setup.log',
-    });
-    process.exit(4);
-  }
-
-  // Trigger is required only if --no-trigger-required is not set
-  if (parsed.requiresTrigger && !parsed.trigger) {
-    emitStatus('REGISTER_CHANNEL', {
-      STATUS: 'failed',
-      ERROR: 'missing_trigger',
       LOG: 'logs/setup.log',
     });
     process.exit(4);
