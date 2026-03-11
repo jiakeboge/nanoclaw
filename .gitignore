@@ -42,3 +42,4 @@ agents-sdk-docs
 
 # Local Claude Code settings
 .claude/settings.local.json
+docs_zh
