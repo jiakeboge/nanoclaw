@@ -69,6 +69,9 @@ let registeredGroups: Record<string, RegisteredGroup> = {};
 let lastAgentTimestamp: Record<string, string> = {};
 let messageLoopRunning = false;
 
+// Track IPC messages sent per chatJid to prevent duplicates from streaming output
+const ipcMessagesSent = new Map<string, number>();
+
 const channels: Channel[] = [];
 const queue = new GroupQueue();
 
@@ -221,7 +224,18 @@ async function processGroupMessages(chatJid: string): Promise<boolean> {
       // Strip <internal>...</internal> blocks — agent uses these for internal reasoning
       const text = raw.replace(/<internal>[\s\S]*?<\/internal>/g, '').trim();
       logger.info({ group: group.name }, `Agent output: ${raw.length} chars`);
-      if (text) {
+
+      // Check if IPC already sent a message for this chat (prevent duplicates)
+      const ipcSentAt = ipcMessagesSent.get(chatJid);
+      if (ipcSentAt) {
+        ipcMessagesSent.delete(chatJid);
+        logger.info(
+          { group: group.name, ipcSentAt },
+          'Skipping streaming output - IPC message was sent',
+        );
+        // Still mark as sent for error recovery logic
+        outputSentToUser = true;
+      } else if (text) {
         await channel.sendMessage(chatJid, text);
         outputSentToUser = true;
       }
@@ -618,6 +632,9 @@ async function main(): Promise<void> {
       const channel = findChannel(channels, jid);
       if (!channel) throw new Error(`No channel for JID: ${jid}`);
       return channel.sendMessage(jid, text);
+    },
+    markMessageSent: (jid) => {
+      ipcMessagesSent.set(jid, Date.now());
     },
     registeredGroups: () => registeredGroups,
     registerGroup,
